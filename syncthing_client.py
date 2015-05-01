@@ -65,6 +65,9 @@ class MessageProcessor:
         self.server_down = 0
 
     def send_greetings(self):
+        msg_cc, _    = self.receive_message(MSG_CLUSTERCONFIG)
+        self.process_msgclusterconfig(msg_cc)
+
         folders = []
         for folder_name in self.state.registered_folders:
             folders.append( self.scan_folder(folder_name) )
@@ -72,10 +75,8 @@ class MessageProcessor:
         send_message(self.socket, pack_msgclusterconfig(self.state, folders))
 
         for folder in folders:
+            print('Send Index for folder: %s' % folder['id'])
             send_message(self.socket, pack_msgindex(self.state, folder))
-
-        msg_cc, _    = self.receive_message(MSG_CLUSTERCONFIG)
-        self.process_msgclusterconfig(msg_cc)
 
         n_folders = len(msg_cc['folders'])
         for i in range(n_folders):
@@ -83,9 +84,10 @@ class MessageProcessor:
             self.process_msgindex(msg_index)
 
     def scan_folder(self, folder_name):
+        assert(type(folder_name) == bytearray)
         folder = \
         {'files'     : [], # implement this
-         'id'        : bytearray(folder_name.encode('utf-8')),
+         'id'        : folder_name,
          'devices'   : [{'id'            : state.deviceID,
                          'max_local_ver' : 0,
                          'flags'         : 0,
@@ -112,7 +114,7 @@ class MessageProcessor:
         messageVersion, messageId, messageType, compressed, length = unpack_msgheader(msgheader)
         data = recv_data(self.socket, length)
 
-        # print(messageVersion, messageId, messageType, compressed, length)
+        print(messageVersion, messageId, messageType, compressed, length)
 
         if expected:
             assert(messageType == expected or messageType in expected)
@@ -248,7 +250,7 @@ class MessageProcessor:
 
 if __name__ == "__main__":
     listen_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-    listen_sock.settimeout(10)
+    listen_sock.settimeout(20)
 
     listen_sock = ssl.wrap_socket(listen_sock,
                                   keyfile=ssl_key_file,
