@@ -257,9 +257,7 @@ if __name__ == "__main__":
     state.folder_base = 'sync'
 
     if not server_address:
-        server_address = \
-                announcement_local (state.deviceID, get_device_id_from_string(server_deviceid)) or \
-                announcement_global(state.deviceID, get_device_id_from_string(server_deviceid))
+        server_address = announcement(state.deviceID, get_device_id_from_string(server_deviceid))
 
         if server_address:
             print('Server found: %s:%s' % server_address)

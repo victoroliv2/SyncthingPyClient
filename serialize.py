@@ -231,3 +231,9 @@ def pack_announce(myID):
     content += pack_uint(0)
     content += pack_uint(0)
     return content
+
+def pack_query(serverID):
+    content = bytearray(b'')
+    content += pack_uint(0x2CA856F5)
+    content += pack_string(serverID)
+    return content
