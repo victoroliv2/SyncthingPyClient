@@ -1,3 +1,6 @@
+import os
+from datetime import datetime
+
 def bytearray2str(s):
     return "".join([chr(a) for a in s])
 
@@ -17,4 +20,6 @@ def send_message(socket, msg):
     if not socket.sendall(msg):
         assert(0)
 
-
+def backup_file(file_path):
+    timestr = datetime.now().strftime('%Y-%m-%d-%H:%M:%S')
+    os.rename(file_path, file_path+"."+timestr+".backup")

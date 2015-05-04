@@ -1,12 +1,13 @@
 #
 # Syncthing Client
 # Victor Oliveira
-# vmail@doravel.me
+# victor@doravel.me
 #
 
 import socket
 import os
 import sys
+from datetime import datetime
 
 import lz4
 from hashlib import sha256
@@ -178,20 +179,20 @@ class MessageProcessor:
             assert(len(oldhash) == 32)
             if oldhash == block_hash:
                 newfd.write(olddata)
-                return True
+                return 1
 
         send_message(listen_sock, pack_msgrequest(state, folder, filename, offset, block_size, block_hash))
         msg_resp, _ = self.receive_message(MSG_RESPONSE)
 
         if (msg_resp['code'] != 0):
-            return False
+            return 0
 
         data = msg_resp['data']
         newfd.write(data)
 
         print('Got %d bytes for %s' % (len(data), filename))
 
-        return True
+        return 2
 
     def process_msgindex(self, msg):
         folder = msg['folder']
@@ -212,7 +213,11 @@ class MessageProcessor:
             size = sum([b['size'] for b in blocks])
 
             if size == 0:
-                if exists: os.remove(file_path)
+                if exists:
+                    if backup_mode:
+                        backup_file(file_path)
+                    else:
+                        os.remove(file_path)
                 continue
 
             ok = True
@@ -226,12 +231,14 @@ class MessageProcessor:
                     oldsize = -1
                     oldfile = None
 
+                file_changed = False
+
                 for i, block in enumerate(blocks):
                     off_start = i * max_block_size
                     block_size = min(max_block_size, size-off_start)
                     off_end = off_start + block_size - 1
                     old_contained = off_end < oldsize
-                    v = self.download(self.state,
+                    ret = self.download(self.state,
                                       oldfile if old_contained else None,
                                       newfile,
                                       folder,
@@ -239,16 +246,20 @@ class MessageProcessor:
                                       off_start,
                                       block_size,
                                       block['hash'])
-                    if not v:
+                    if ret == 0:
                         ok = False
                         break
+                    elif ret == 2:
+                        file_changed = True
 
                 if oldfile: oldfile.close()
 
-            if ok:
-                if exists: os.remove(file_path)
+            if ok and file_changed:
+                if exists:
+                    if backup_mode: backup_file(file_path)
+                    else:           os.remove(file_path)
                 os.rename(tmp_file_path, file_path)
-            else:
+            elif not ok:
                 print("Something bad happened, deleting %s" % (tmp_file_path))
                 os.remove(tmp_file_path)
 
