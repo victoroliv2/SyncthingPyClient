@@ -24,6 +24,7 @@ MSG_CLOSE = 7
 from util import *
 from device_id import *
 from serialize import *
+from discovery import *
 from config import *
 
 class State:
@@ -112,9 +113,12 @@ class MessageProcessor:
     def receive_message(self, expected=None):
         msgheader = recv_data(self.socket, 8)
         messageVersion, messageId, messageType, compressed, length = unpack_msgheader(msgheader)
+
         data = recv_data(self.socket, length)
 
-        print(messageVersion, messageId, messageType, compressed, length)
+        #print(messageVersion, messageId, messageType, compressed, length)
+        
+        assert(compressed == 0) # still not implemented
 
         if expected:
             assert(messageType == expected or messageType in expected)
@@ -249,6 +253,20 @@ class MessageProcessor:
                 os.remove(tmp_file_path)
 
 if __name__ == "__main__":
+    state = State(ssl_cert_file)
+    state.folder_base = 'sync'
+
+    if not server_address:
+        server_address = \
+                announcement_local (state.deviceID, get_device_id_from_string(server_deviceid)) or \
+                announcement_global(state.deviceID, get_device_id_from_string(server_deviceid))
+
+        if server_address:
+            print('Server found: %s:%s' % server_address)
+        else:
+            print('Server not found')
+            sys.exit(1)
+
     listen_sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     listen_sock.settimeout(20)
 
@@ -259,8 +277,6 @@ if __name__ == "__main__":
 
     listen_sock.connect(server_address)
 
-    state = State(ssl_cert_file)
-    state.folder_base = 'sync'
     messageProcessor = MessageProcessor(state, socket)
 
     msgProc = MessageProcessor(state, listen_sock)

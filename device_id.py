@@ -22,3 +22,16 @@ def get_device_id(barray):
     c = chunk_str(s, 13)
     k = "".join(["%s%s" % (cc, luhn_checksum(cc)) for cc in c])
     return "-".join(chunk_str(k,7))
+
+def get_device_id_from_string(s):
+    s = s.upper()
+    s = s.replace("-", "")
+    assert(len(s) == 56)
+    c = chunk_str(s, 14)
+    did = ""
+    for cc in c:
+        csum = luhn_checksum(cc[0:13])
+        if csum != cc[13]: return False
+        did += cc[0:13]
+    did += "===="
+    return base64.b32decode(did)

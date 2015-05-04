@@ -130,7 +130,23 @@ def unpack_msgping(s):
  
 def unpack_msgpong(s):
     return {}, ""
- 
+
+def unpack_announce_address(s):
+    return unpack_dict(s,
+            [('ip'  , unpack_string),
+             ('port', unpack_uint)])
+
+def unpack_announce_device(s):
+    return unpack_dict(s,
+            [('id',        unpack_string),
+             ('addresses', unpacker_list(unpack_announce_address))])
+
+def unpack_announce(s):
+    return unpack_dict(s,
+            [('magic',         unpack_uint),
+             ('device',        unpack_announce_device),
+             ('extra_devices', unpacker_list(unpack_announce_device))])
+
 def pack_option(option):
     return pack_dict(option,
             [('key',   pack_string),
@@ -208,4 +224,10 @@ def pack_msgrequest(state, folder, filename, offset, size, blockhash):
     content += packer_list(pack_option)([])
     return pack_msgheader(state, 2, len(content)) + content
 
-
+def pack_announce(myID):
+    content = bytearray(b'')
+    content += pack_uint(0x9D79BC39)
+    content += pack_string(myID)
+    content += pack_uint(0)
+    content += pack_uint(0)
+    return content
