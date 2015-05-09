@@ -119,7 +119,8 @@ class MessageProcessor:
 
         #print(messageVersion, messageId, messageType, compressed, length)
         
-        assert(compressed == 0) # still not implemented
+        if compressed:
+            data = bytearray(lz4.loads(bytes(data)))
 
         if expected:
             assert(messageType == expected or messageType in expected)
